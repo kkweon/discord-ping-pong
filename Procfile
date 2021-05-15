@@ -1,1 +1,1 @@
-web: ./discord-ping-pong server
+web: ./bin/discord-ping-pong server
