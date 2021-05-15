@@ -1,28 +1,23 @@
-package main
+package application
 
 import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"net/http"
-	"os"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
-func main() {
-	pKey := os.Getenv("APPLICATION_PUBLIC_KEY")
-
-	if pKey == "" {
-		logrus.Fatal("env APPLICATION_PUBLIC_KEY is required. Get your application key from https://discord.com/developers/applications.")
-		return
-	}
-
-	rawKey := []byte(pKey)
+func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
+	rawKey := []byte(applicationPublicKey)
 	applicaitonPublicKey := make([]byte, hex.DecodedLen(len(rawKey)))
 	hex.Decode(applicaitonPublicKey, rawKey)
+	return ed25519.PublicKey(applicaitonPublicKey)
+}
 
+func Run(publicKeyFromDiscord string) error {
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -30,7 +25,7 @@ func main() {
 		})
 	})
 	r.POST("/api/interactions", func(c *gin.Context) {
-		if !discordgo.VerifyInteraction(c.Request, ed25519.PublicKey(applicaitonPublicKey)) {
+		if !discordgo.VerifyInteraction(c.Request, decodeToPublicKey(publicKeyFromDiscord)) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -48,5 +43,5 @@ func main() {
 		}
 		c.Abort()
 	})
-	r.Run()
+	return r.Run()
 }
