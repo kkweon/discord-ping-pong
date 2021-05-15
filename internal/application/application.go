@@ -17,15 +17,17 @@ func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 	return ed25519.PublicKey(applicaitonPublicKey)
 }
 
-func Run(publicKeyFromDiscord string) error {
+func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 	r := gin.Default()
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
 	})
+
 	r.POST("/api/interactions", func(c *gin.Context) {
-		if !discordgo.VerifyInteraction(c.Request, decodeToPublicKey(publicKeyFromDiscord)) {
+		if !discordgo.VerifyInteraction(c.Request, pubKey) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -43,5 +45,15 @@ func Run(publicKeyFromDiscord string) error {
 		}
 		c.Abort()
 	})
+
+	r.NoRoute(func(c *gin.Context) {
+		c.AbortWithStatus(http.StatusNotFound)
+	})
+
+	return r
+}
+
+func Run(publicKeyFromDiscord string) error {
+	r := GetRouter(decodeToPublicKey(publicKeyFromDiscord))
 	return r.Run()
 }
