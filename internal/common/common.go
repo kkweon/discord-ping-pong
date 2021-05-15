@@ -232,7 +232,7 @@ type DiscordInteractionApplicationCommandCallbackData struct {
 	// message content
 	Content string `json:"content"`
 	// of embeds	supports up to 10 embeds
-	Embeds DiscordEmbed `json:"embeds"`
+	Embeds []DiscordEmbed `json:"embeds"`
 	// allowed mentions object
 	AllowedMentions DiscordAllowedMention `json:"allowed_mentions"`
 	// set to 64 to make your response ephemeral
