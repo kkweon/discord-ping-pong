@@ -3,6 +3,7 @@ package application
 import (
 	"crypto/ed25519"
 	"encoding/hex"
+	"github.com/kkweon/discord-ping-pong/internal/common"
 	"net/http"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,9 +13,9 @@ import (
 
 func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 	rawKey := []byte(applicationPublicKey)
-	applicaitonPublicKey := make([]byte, hex.DecodedLen(len(rawKey)))
-	hex.Decode(applicaitonPublicKey, rawKey)
-	return ed25519.PublicKey(applicaitonPublicKey)
+	byteKey := make([]byte, hex.DecodedLen(len(rawKey)))
+	_, _ = hex.Decode(byteKey, rawKey)
+	return byteKey
 }
 
 func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
@@ -32,14 +33,23 @@ func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 			return
 		}
 
-		var rootMessage discordgo.Message
+		var rootMessage common.DiscordInteraction
 		err := c.BindJSON(&rootMessage)
 		logrus.WithError(err).Infof("%+v", rootMessage)
 		if err == nil {
-			if rootMessage.Type == 1 {
+			if rootMessage.Type == common.DiscordInteractionTypePing {
 				c.JSON(http.StatusOK, gin.H{
-					"type": 1,
+					"type": common.DiscordInteractionCallbackTypePong,
 				})
+				return
+			} else if rootMessage.Type == common.DiscordInteractionTypeApplicationCommand {
+				response := common.DiscordInteractionResponse{
+					Type: common.DiscordInteractionCallbackTypeChannelMessageWithSource,
+					Data: common.DiscordInteractionApplicationCommandCallbackData{
+						Content: "Pong!",
+					},
+				}
+				c.JSON(http.StatusOK, response)
 				return
 			}
 		}

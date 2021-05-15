@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
+	"github.com/kkweon/discord-ping-pong/internal/common"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +36,7 @@ func VerifyRequest(t *testing.T, request *http.Request) (*http.Request, ed25519.
 	return request, pubkey
 }
 
-func TestUnverifyRequest(t *testing.T) {
+func TestUnverifiedRequest(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(`{ "type": 1 }`))
@@ -47,10 +49,10 @@ func TestUnverifyRequest(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, w.Code, http.StatusUnauthorized)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestVerifyRequest(t *testing.T) {
+func TestVerifiedRequest(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(`{ "type": 1 }`))
@@ -60,7 +62,7 @@ func TestVerifyRequest(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, w.Code, http.StatusOK)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func Test404(t *testing.T) {
@@ -70,5 +72,34 @@ func Test404(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/unhandled", strings.NewReader(""))
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, w.Code, http.StatusNotFound)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestInteraction(t *testing.T) {
+	body := `{
+  "id":	"id",
+  "application_id": "application-id",
+  "type": 2,
+  "data": {	
+    "id":  "snowflake",
+    "name": "name"
+  }
+}`
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(body))
+	req, pubKey := VerifyRequest(t, req)
+
+	r := GetRouter(pubKey)
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	bodyBs, err := ioutil.ReadAll(w.Body)
+	assert.NoError(t, err)
+
+	var discordResponse common.DiscordInteractionResponse
+	err = json.Unmarshal(bodyBs, &discordResponse)
+	assert.NoError(t, err)
 }

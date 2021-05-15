@@ -15,7 +15,7 @@ var serverCmd = &cobra.Command{
 		pKey := os.Getenv("APPLICATION_PUBLIC_KEY")
 
 		if pKey == "" {
-			return errors.New("env APPLICATION_PUBLIC_KEY is required. Get your application key from https://discord.com/developers/applications.")
+			return errors.New("env APPLICATION_PUBLIC_KEY is required. Get your application key from https://discord.com/developers/applications")
 		}
 
 		return application.Run(pKey)
