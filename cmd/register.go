@@ -31,7 +31,7 @@ var registerCmd = &cobra.Command{
 			{
 				Name:        "define",
 				Description: "Google Search this term",
-				Options: []common.DiscordApplicationCommandOption{
+				Options: []*common.DiscordApplicationCommandOption{
 					{
 						Type:        common.DiscordApplicationCommandOptionTypeString,
 						Name:        "term",
