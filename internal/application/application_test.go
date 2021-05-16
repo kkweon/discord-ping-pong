@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +46,9 @@ func TestUnverifiedRequest(t *testing.T) {
 	t.Log("modify the timestamp then this request becomes invalid")
 	req.Header.Set("X-Signature-Timestamp", "1234")
 
-	r := GetRouter(pubKey)
+	r := GetRouter(pubKey, func(term string, token string) {
+
+	})
 
 	r.ServeHTTP(w, req)
 
@@ -58,7 +61,9 @@ func TestVerifiedRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(`{ "type": 1 }`))
 	req, pubKey := VerifyRequest(t, req)
 
-	r := GetRouter(pubKey)
+	r := GetRouter(pubKey, func(term string, token string) {
+
+	})
 
 	r.ServeHTTP(w, req)
 
@@ -67,7 +72,9 @@ func TestVerifiedRequest(t *testing.T) {
 
 func Test404(t *testing.T) {
 	w := httptest.NewRecorder()
-	r := GetRouter(ed25519.PublicKey{})
+	r := GetRouter(ed25519.PublicKey{}, func(term string, token string) {
+
+	})
 
 	req, _ := http.NewRequest("GET", "/unhandled", strings.NewReader(""))
 	r.ServeHTTP(w, req)
@@ -75,14 +82,14 @@ func Test404(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-func TestInteraction(t *testing.T) {
+func TestGetRouter_Ping(t *testing.T) {
 	body := `{
   "id":	"id",
   "application_id": "application-id",
   "type": 2,
   "data": {	
     "id":  "snowflake",
-    "name": "name"
+    "name": "ping"
   }
 }`
 	w := httptest.NewRecorder()
@@ -90,7 +97,9 @@ func TestInteraction(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(body))
 	req, pubKey := VerifyRequest(t, req)
 
-	r := GetRouter(pubKey)
+	r := GetRouter(pubKey, func(term string, token string) {
+
+	})
 
 	r.ServeHTTP(w, req)
 
@@ -102,4 +111,40 @@ func TestInteraction(t *testing.T) {
 	var discordResponse common.DiscordInteractionResponse
 	err = json.Unmarshal(bodyBs, &discordResponse)
 	assert.NoError(t, err)
+}
+
+func TestGetRouter_Define(t *testing.T) {
+	jsonText, _ := ioutil.ReadFile("./mocks/define_request.json")
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("POST", "/api/interactions", bytes.NewBuffer(jsonText))
+	req, pubKey := VerifyRequest(t, req)
+
+	done := make(chan bool)
+	defineHandler := func(term, token string) {
+		done <- true
+	}
+	r := GetRouter(pubKey, defineHandler)
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	bodyBs, err := ioutil.ReadAll(w.Body)
+	assert.NoError(t, err)
+
+	var discordResponse common.DiscordInteractionResponse
+	err = json.Unmarshal(bodyBs, &discordResponse)
+	assert.NoError(t, err)
+	assert.Equal(t, common.DiscordInteractionCallbackTypeDeferredChannelMessageWithSource, discordResponse.Type)
+
+	for {
+		select {
+		case <-done:
+			return
+		case <-time.After(time.Second):
+			t.Fail()
+			return
+		}
+	}
 }

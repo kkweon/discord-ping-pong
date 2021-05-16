@@ -4,14 +4,40 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"github.com/kkweon/discord-ping-pong/internal/common"
+	"github.com/kkweon/discord-ping-pong/internal/searcher"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+type Application struct {
+	ApplicationPublicKey string
+	ApplicationID        string
+	HttpClient           httpClient
+	Searcher             searcher.Searcher
+}
+
+func New(applicationPublicKey, applicationID string, svc searcher.Searcher) Application {
+	return Application{
+		ApplicationPublicKey: applicationPublicKey,
+		ApplicationID:        applicationID,
+		HttpClient: &http.Client{
+			Timeout: time.Minute,
+		},
+		Searcher: svc,
+	}
+}
 
 func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 	rawKey := []byte(applicationPublicKey)
@@ -20,7 +46,7 @@ func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 	return byteKey
 }
 
-func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
+func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, token string)) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(requestLogger())
@@ -46,14 +72,31 @@ func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 				})
 				return
 			} else if rootMessage.Type == common.DiscordInteractionTypeApplicationCommand {
-				response := common.DiscordInteractionResponse{
-					Type: common.DiscordInteractionCallbackTypeChannelMessageWithSource,
-					Data: common.DiscordInteractionApplicationCommandCallbackData{
-						Content: "Pong!",
-					},
+				switch rootMessage.Data.Name {
+				case "ping":
+					response := common.DiscordInteractionResponse{
+						Type: common.DiscordInteractionCallbackTypeChannelMessageWithSource,
+						Data: common.DiscordInteractionApplicationCommandCallbackData{
+							Content: "Pong!",
+						},
+					}
+					c.JSON(http.StatusOK, response)
+					return
+				case "define":
+					response := common.DiscordInteractionResponse{
+						Type: common.DiscordInteractionCallbackTypeDeferredChannelMessageWithSource,
+					}
+					c.JSON(http.StatusOK, response)
+
+					for _, option := range rootMessage.Data.Options {
+						if option.Name == "term" && option.Value.StringValue != nil {
+							// option.Value contains the search term
+							// PATCH /webhooks/{application.id}/{interaction.token}/messages/@original
+							go handleTermSearch(*option.Value.StringValue, rootMessage.Token)
+						}
+					}
+					return
 				}
-				c.JSON(http.StatusOK, response)
-				return
 			}
 		}
 		logrus.WithError(err).Warn("did not return any value")
@@ -79,7 +122,32 @@ func requestLogger() gin.HandlerFunc {
 	}
 }
 
-func Run(publicKeyFromDiscord string) error {
-	r := GetRouter(decodeToPublicKey(publicKeyFromDiscord))
+func (a *Application) Run() error {
+	r := GetRouter(decodeToPublicKey(a.ApplicationPublicKey), func(term string, token string) {
+		searchResult, err := a.Searcher.Search(term)
+		if err != nil {
+			logrus.WithError(err).WithField("term", term).Warn("Search failed")
+			return
+		}
+		body := common.DiscordEditWebhookMessage{
+			Content: searcher.SearchResultToString(searchResult),
+		}
+		bodyBS, err := json.Marshal(body)
+		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"token":         token,
+				"applicationID": a.ApplicationID,
+				"body":          body,
+			}).Warnf("failed to build a new request")
+		}
+		resp, err := a.HttpClient.Do(req)
+		respBs, _ := ioutil.ReadAll(resp.Body)
+
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"response":    string(respBs),
+			"status code": resp.Status,
+		}).Info("end of term handler")
+	})
 	return r.Run()
 }

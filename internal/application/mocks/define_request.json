@@ -1,0 +1,39 @@
+{
+  "application_id": "application-id",
+  "channel_id": "channel-id",
+  "data": {
+    "id": "843274462127587398",
+    "name": "define",
+    "options": [
+      {
+        "name": "term",
+        "type": 3,
+        "value": "G O O G L E"
+      }
+    ]
+  },
+  "guild_id": "guild-id",
+  "id": "843309831552630804",
+  "member": {
+    "avatar": null,
+    "deaf": false,
+    "is_pending": false,
+    "joined_at": "2021-05-13T03:55:39.071000+00:00",
+    "mute": false,
+    "nick": "권경모",
+    "pending": false,
+    "permissions": "7217860321",
+    "premium_since": null,
+    "roles": [],
+    "user": {
+      "avatar": "3018db31f16d2c5d8f0c092c0a9f2075",
+      "discriminator": "0792",
+      "id": "352431404086460419",
+      "public_flags": 0,
+      "username": "kkweon"
+    }
+  },
+  "token": "aW50ZXJhY3Rpb246ODQzMzA5ODMxNTUyNjMwODA0OmQ3bFAzaFQ1V3Nlekw2OTl5VkNJNzU1dEc5RzUwcW8yU0RwUFd4TjNOM3dMOWNxWEFmRkNKVVZWZUR5RjRHdWhJNHk1cmxCNjFjcUVLRHVzdmQzaEQzYzlvaHhJMWQ0MGkwazNBeGRqdEhsRW5aWUxSNUZNcFN6Tk1DUk1ZeEZp",
+  "type": 2,
+  "version": 1
+}

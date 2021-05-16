@@ -79,13 +79,11 @@ var registerCmd = &cobra.Command{
 	},
 }
 
-const baseURL = "discord.com/api/v8"
-
 func getURL() string {
 	if guildID != "" {
-		return fmt.Sprintf("https://%s/applications/%s/guilds/%s/commands", baseURL, applicationID, guildID)
+		return fmt.Sprintf("https://%s/applications/%s/guilds/%s/commands", common.DiscordAPIv8URL, applicationID, guildID)
 	}
-	return fmt.Sprintf("https://%s/applications/%s/commands", baseURL, applicationID)
+	return fmt.Sprintf("https://%s/applications/%s/commands", common.DiscordAPIv8URL, applicationID)
 }
 
 func init() {
