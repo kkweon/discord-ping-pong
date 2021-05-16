@@ -148,6 +148,8 @@ func (a *Application) Run() error {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"response":    string(respBs),
 			"status code": resp.Status,
+			"URL":         req.URL,
+			"body":        string(bodyBS),
 		}).Info("end of term handler")
 	})
 	return r.Run()
