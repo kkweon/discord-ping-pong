@@ -28,6 +28,18 @@ var registerCmd = &cobra.Command{
 				Name:        "ping",
 				Description: "Healthcheck the server status",
 			},
+			{
+				Name:        "define",
+				Description: "Google Search this term",
+				Options: []common.DiscordApplicationCommandOption{
+					{
+						Type:        common.DiscordApplicationCommandOptionTypeString,
+						Name:        "term",
+						Description: "Term to search",
+						Required:    true,
+					},
+				},
+			},
 		}
 		commandListSerialized, err := json.Marshal(commandList)
 		if err != nil {

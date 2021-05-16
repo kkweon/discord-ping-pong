@@ -9,14 +9,14 @@ type DiscordApplicationCommandOptionType int
 
 const (
 	DiscordApplicationCommandOptionTypeSubCommand      DiscordApplicationCommandOptionType = 1
-	DiscordApplicationCommandOptionTypeSubCommandGroup                                     = 2
-	DiscordApplicationCommandOptionTypeString                                              = 3
-	DiscordApplicationCommandOptionTypeInteger                                             = 4
-	DiscordApplicationCommandOptionTypeBoolean                                             = 5
-	DiscordApplicationCommandOptionTypeUser                                                = 6
-	DiscordApplicationCommandOptionTypeChannel                                             = 7
-	DiscordApplicationCommandOptionTypeRole                                                = 8
-	DiscordApplicationCommandOptionTypeMentionable                                         = 9
+	DiscordApplicationCommandOptionTypeSubCommandGroup DiscordApplicationCommandOptionType = 2
+	DiscordApplicationCommandOptionTypeString          DiscordApplicationCommandOptionType = 3
+	DiscordApplicationCommandOptionTypeInteger         DiscordApplicationCommandOptionType = 4
+	DiscordApplicationCommandOptionTypeBoolean         DiscordApplicationCommandOptionType = 5
+	DiscordApplicationCommandOptionTypeUser            DiscordApplicationCommandOptionType = 6
+	DiscordApplicationCommandOptionTypeChannel         DiscordApplicationCommandOptionType = 7
+	DiscordApplicationCommandOptionTypeRole            DiscordApplicationCommandOptionType = 8
+	DiscordApplicationCommandOptionTypeMentionable     DiscordApplicationCommandOptionType = 9
 )
 
 type DiscordApplicationCommandOptionChoice struct {
@@ -28,7 +28,7 @@ type DiscordApplicationCommandOptionChoice struct {
 
 type DiscordApplicationCommandOption struct {
 	// value of ApplicationCommandOptionType
-	Type int `json:"Type"`
+	Type DiscordApplicationCommandOptionType `json:"type"`
 	//	1-32 lowercase character name matching ^[\w-]{1,32}$
 	Name string `json:"name"`
 	//	1-100 character description
@@ -63,19 +63,6 @@ type DiscordApplicationCommandInteractionDataResolved struct {
 	Roles string `json:"roles"`
 	//  ID: Channel	the IDs and partial Channel objects
 	Channels string `json:"channels"`
-}
-
-type DiscordOptionType int
-
-type DiscordApplicationCommandInteractionDataOption struct {
-	// the name of the parameter
-	Name string `json:"name"`
-	// value of ApplicationCommandOptionType
-	Type DiscordApplicationCommandOptionType `json:"type"`
-	// the value of the pair
-	Value DiscordOptionType `json:"value"`
-	// of ApplicationCommandInteractionDataOption	present if this option is a group or subcommand
-	Options []DiscordApplicationCommandInteractionDataOption `json:"options"`
 }
 
 type DiscordInteractionType int
