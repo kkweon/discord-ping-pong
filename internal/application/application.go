@@ -1,9 +1,11 @@
 package application
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
 	"github.com/kkweon/discord-ping-pong/internal/common"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/bwmarrin/discordgo"
@@ -20,6 +22,8 @@ func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 
 func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(requestLogger())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -61,6 +65,18 @@ func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 	})
 
 	return r
+}
+
+func requestLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		buf, _ := ioutil.ReadAll(c.Request.Body)
+		logrus.WithFields(logrus.Fields{
+			"method": c.Request.Method,
+			"URL":    c.Request.URL,
+		}).Infof("%s", string(buf))
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+		c.Next()
+	}
 }
 
 func Run(publicKeyFromDiscord string) error {
