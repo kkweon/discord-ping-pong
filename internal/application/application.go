@@ -39,7 +39,6 @@ func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 
 		var rootMessage common.DiscordInteraction
 		err := c.BindJSON(&rootMessage)
-		logrus.WithError(err).Infof("%+v", rootMessage)
 		if err == nil {
 			if rootMessage.Type == common.DiscordInteractionTypePing {
 				c.JSON(http.StatusOK, gin.H{
@@ -57,6 +56,7 @@ func GetRouter(pubKey ed25519.PublicKey) *gin.Engine {
 				return
 			}
 		}
+		logrus.WithError(err).Warn("did not return any value")
 		c.Abort()
 	})
 
