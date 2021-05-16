@@ -133,7 +133,7 @@ func (a *Application) Run() error {
 			Content: searcher.SearchResultToString(searchResult),
 		}
 		bodyBS, err := json.Marshal(body)
-		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))
+		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{
 				"token":         token,
