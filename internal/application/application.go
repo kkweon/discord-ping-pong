@@ -141,6 +141,7 @@ func (a *Application) Run() error {
 				"body":          body,
 			}).Warnf("failed to build a new request")
 		}
+		req.Header.Set("Content-Type", "application/json")
 		resp, err := a.HttpClient.Do(req)
 		respBs, _ := ioutil.ReadAll(resp.Body)
 
