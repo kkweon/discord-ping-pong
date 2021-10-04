@@ -1,3 +1,4 @@
 /.env
 /discord-ping-pong
 .idea
+/*.http
