@@ -47,7 +47,7 @@ func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 	return byteKey
 }
 
-func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, token string, useEmbeds bool)) *gin.Engine {
+func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, token string)) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(requestLogger())
@@ -89,25 +89,15 @@ func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, toke
 					}
 					c.JSON(http.StatusOK, response)
 
-					var term string
-					var useEmbeds bool
-
 					for _, option := range rootMessage.Data.Options {
 						if option.Name == "term" && option.Value.StringValue != nil {
 							// option.Value contains the search term
 							// PATCH /webhooks/{application.id}/{interaction.token}/messages/@original
-							term = *option.Value.StringValue
-
-						} else if option.Name == "use_embeds" && option.Value.BoolValue != nil {
-							useEmbeds = *option.Value.BoolValue
+							term := *option.Value.StringValue
+							go handleTermSearch(term, rootMessage.Token)
+							return
 						}
 					}
-
-					if term != "" {
-						go handleTermSearch(term, rootMessage.Token, useEmbeds)
-					}
-
-					return
 				}
 			}
 		}
@@ -139,22 +129,14 @@ func (a *Application) Run() error {
 	return r.Run()
 }
 
-func (a *Application) searchTermAndEditDiscordMessage(term string, token string, useEmbeds bool) {
+func (a *Application) searchTermAndEditDiscordMessage(term string, token string) {
 	searchResult, err := a.Searcher.Search(term)
 	if err != nil {
 		log.WithError(err).WithField("term", term).Warn("Search failed")
 		return
 	}
 
-	var body *common.DiscordEditWebhookMessage
-
-	if useEmbeds {
-		body = convertToEmbeds(searchResult)
-	} else {
-		body = &common.DiscordEditWebhookMessage{
-			Content: searcher.SearchResultToString(searchResult),
-		}
-	}
+	body := convertToEmbeds(searchResult)
 
 	bodyBS, err := json.Marshal(body)
 	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))

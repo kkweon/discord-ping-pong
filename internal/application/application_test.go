@@ -46,7 +46,7 @@ func TestUnverifiedRequest(t *testing.T) {
 	t.Log("modify the timestamp then this request becomes invalid")
 	req.Header.Set("X-Signature-Timestamp", "1234")
 
-	r := GetRouter(pubKey, func(term string, token string, useEmbeds bool) {
+	r := GetRouter(pubKey, func(term, token string) {
 
 	})
 
@@ -61,7 +61,7 @@ func TestVerifiedRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(`{ "type": 1 }`))
 	req, pubKey := VerifyRequest(t, req)
 
-	r := GetRouter(pubKey, func(term string, token string, useEmbeds bool) {
+	r := GetRouter(pubKey, func(term, token string) {
 
 	})
 
@@ -72,7 +72,7 @@ func TestVerifiedRequest(t *testing.T) {
 
 func Test404(t *testing.T) {
 	w := httptest.NewRecorder()
-	r := GetRouter(ed25519.PublicKey{}, func(term string, token string, useEmbeds bool) {
+	r := GetRouter(ed25519.PublicKey{}, func(term, token string) {
 
 	})
 
@@ -97,7 +97,7 @@ func TestGetRouter_Ping(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/interactions", strings.NewReader(body))
 	req, pubKey := VerifyRequest(t, req)
 
-	r := GetRouter(pubKey, func(term string, token string, useEmbeds bool) {
+	r := GetRouter(pubKey, func(term, token string) {
 
 	})
 
@@ -121,7 +121,7 @@ func TestGetRouter_Define(t *testing.T) {
 	req, pubKey := VerifyRequest(t, req)
 
 	done := make(chan bool)
-	defineHandler := func(term, token string, useEmbeds bool) {
+	defineHandler := func(term, token string) {
 		done <- true
 	}
 	r := GetRouter(pubKey, defineHandler)
