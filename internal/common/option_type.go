@@ -8,6 +8,7 @@ import (
 type DiscordOptionType struct {
 	IntValue    *int
 	StringValue *string
+	BoolValue   *bool
 }
 
 func (d *DiscordOptionType) UnmarshalJSON(bytes []byte) error {
@@ -22,6 +23,13 @@ func (d *DiscordOptionType) UnmarshalJSON(bytes []byte) error {
 	err = json.Unmarshal(bytes, &i)
 	if err == nil {
 		d.IntValue = &i
+		return nil
+	}
+
+	var b bool
+	err = json.Unmarshal(bytes, &b)
+	if err == nil {
+		d.BoolValue = &b
 		return nil
 	}
 

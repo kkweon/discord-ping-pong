@@ -38,6 +38,12 @@ var registerCmd = &cobra.Command{
 						Description: "Term to search",
 						Required:    true,
 					},
+					{
+						Type:        common.DiscordApplicationCommandOptionTypeBoolean,
+						Name:        "use_embeds",
+						Description: "Use Embeds in the result message",
+						Required:    false,
+					},
 				},
 			},
 		}

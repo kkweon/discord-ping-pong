@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kkweon/discord-ping-pong/internal/common"
 	"github.com/kkweon/discord-ping-pong/internal/searcher"
+	"google.golang.org/api/customsearch/v1"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -46,7 +47,7 @@ func decodeToPublicKey(applicationPublicKey string) ed25519.PublicKey {
 	return byteKey
 }
 
-func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, token string)) *gin.Engine {
+func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, token string, useEmbeds bool)) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(requestLogger())
@@ -88,13 +89,24 @@ func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, toke
 					}
 					c.JSON(http.StatusOK, response)
 
+					var term string
+					var useEmbeds bool
+
 					for _, option := range rootMessage.Data.Options {
 						if option.Name == "term" && option.Value.StringValue != nil {
 							// option.Value contains the search term
 							// PATCH /webhooks/{application.id}/{interaction.token}/messages/@original
-							go handleTermSearch(*option.Value.StringValue, rootMessage.Token)
+							term = *option.Value.StringValue
+
+						} else if option.Name == "use_embeds" && option.Value.BoolValue != nil {
+							useEmbeds = *option.Value.BoolValue
 						}
 					}
+
+					if term != "" {
+						go handleTermSearch(term, rootMessage.Token, useEmbeds)
+					}
+
 					return
 				}
 			}
@@ -123,34 +135,61 @@ func requestLogger() gin.HandlerFunc {
 }
 
 func (a *Application) Run() error {
-	r := GetRouter(decodeToPublicKey(a.ApplicationPublicKey), func(term string, token string) {
-		searchResult, err := a.Searcher.Search(term)
-		if err != nil {
-			logrus.WithError(err).WithField("term", term).Warn("Search failed")
-			return
-		}
-		body := common.DiscordEditWebhookMessage{
+	r := GetRouter(decodeToPublicKey(a.ApplicationPublicKey), a.searchTermAndEditDiscordMessage)
+	return r.Run()
+}
+
+func (a *Application) searchTermAndEditDiscordMessage(term string, token string, useEmbeds bool) {
+	searchResult, err := a.Searcher.Search(term)
+	if err != nil {
+		logrus.WithError(err).WithField("term", term).Warn("Search failed")
+		return
+	}
+
+	var body *common.DiscordEditWebhookMessage
+
+	if useEmbeds {
+		body = convertToEmbeds(searchResult)
+	} else {
+		body = &common.DiscordEditWebhookMessage{
 			Content: searcher.SearchResultToString(searchResult),
 		}
-		bodyBS, err := json.Marshal(body)
-		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"token":         token,
-				"applicationID": a.ApplicationID,
-				"body":          body,
-			}).Warnf("failed to build a new request")
-		}
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := a.HttpClient.Do(req)
-		respBs, _ := ioutil.ReadAll(resp.Body)
+	}
 
+	bodyBS, err := json.Marshal(body)
+	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))
+	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
-			"response":    string(respBs),
-			"status code": resp.Status,
-			"URL":         req.URL,
-			"body":        string(bodyBS),
-		}).Info("end of term handler")
-	})
-	return r.Run()
+			"token":         token,
+			"applicationID": a.ApplicationID,
+			"body":          body,
+		}).Warnf("failed to build a new request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := a.HttpClient.Do(req)
+	respBs, _ := ioutil.ReadAll(resp.Body)
+
+	logrus.WithError(err).WithFields(logrus.Fields{
+		"response":    string(respBs),
+		"status code": resp.Status,
+		"URL":         req.URL,
+		"body":        string(bodyBS),
+	}).Info("end of term handler")
+}
+
+func convertToEmbeds(searchResult *customsearch.Search) *common.DiscordEditWebhookMessage {
+	var embeds []*common.DiscordEmbed
+
+	for _, item := range searchResult.Items {
+		embeds = append(embeds, &common.DiscordEmbed{
+			Title:       item.Title,
+			Type:        "rich",
+			Description: item.Snippet,
+			URL:         item.Link,
+		})
+	}
+
+	return &common.DiscordEditWebhookMessage{
+		Embeds: embeds,
+	}
 }

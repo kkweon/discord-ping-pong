@@ -6,7 +6,7 @@ type DiscordEditWebhookMessage struct {
 	// the message contents (up to 2000 characters)
 	Content string `json:"content,omitempty"`
 	// of up to 10 embed objects	embedded rich content
-	Embeds *DiscordEmbed `json:"embeds,omitempty"`
+	Embeds []*DiscordEmbed `json:"embeds,omitempty"`
 	// contents	the contents of the file being sent/edited
 	File string `json:"file,omitempty"`
 	// JSON encoded body of non-file params (multipart/form-data only)
