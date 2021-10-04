@@ -15,7 +15,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type httpClient interface {
@@ -111,7 +111,7 @@ func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, toke
 				}
 			}
 		}
-		logrus.WithError(err).Warn("did not return any value")
+		log.WithError(err).Warn("did not return any value")
 		c.Abort()
 	})
 
@@ -125,7 +125,7 @@ func GetRouter(pubKey ed25519.PublicKey, handleTermSearch func(term string, toke
 func requestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		buf, _ := ioutil.ReadAll(c.Request.Body)
-		logrus.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"method": c.Request.Method,
 			"URL":    c.Request.URL,
 		}).Infof("%s", string(buf))
@@ -142,7 +142,7 @@ func (a *Application) Run() error {
 func (a *Application) searchTermAndEditDiscordMessage(term string, token string, useEmbeds bool) {
 	searchResult, err := a.Searcher.Search(term)
 	if err != nil {
-		logrus.WithError(err).WithField("term", term).Warn("Search failed")
+		log.WithError(err).WithField("term", term).Warn("Search failed")
 		return
 	}
 
@@ -159,7 +159,7 @@ func (a *Application) searchTermAndEditDiscordMessage(term string, token string,
 	bodyBS, err := json.Marshal(body)
 	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("https://%s/webhooks/%s/%s/messages/@original", common.DiscordAPIv8URL, a.ApplicationID, token), bytes.NewReader(bodyBS))
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
+		log.WithError(err).WithFields(log.Fields{
 			"token":         token,
 			"applicationID": a.ApplicationID,
 			"body":          body,
@@ -169,7 +169,7 @@ func (a *Application) searchTermAndEditDiscordMessage(term string, token string,
 	resp, err := a.HttpClient.Do(req)
 	respBs, _ := ioutil.ReadAll(resp.Body)
 
-	logrus.WithError(err).WithFields(logrus.Fields{
+	log.WithError(err).WithFields(log.Fields{
 		"response":    string(respBs),
 		"status code": resp.Status,
 		"URL":         req.URL,

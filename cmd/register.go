@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kkweon/discord-ping-pong/internal/common"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"net/http"
@@ -55,14 +55,14 @@ var registerCmd = &cobra.Command{
 		if dryRun {
 
 			commandListSerializedIndented, _ := json.MarshalIndent(commandList, "", "  ")
-
 			fmt.Printf(`Sending a request to %s with the following body:
 %s`, getURL(), string(commandListSerializedIndented))
-
 			return nil
 		}
+
 		url := getURL()
-		logrus.WithField("URL", url).Info("Sending a request")
+		log.WithField("URL", url).Info("Sending a request")
+		// https://discord.com/developers/docs/interactions/application-commands#bulk-overwrite-global-application-commands
 		request, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(commandListSerialized))
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Authorization", fmt.Sprintf("Bot %s", botToken))
